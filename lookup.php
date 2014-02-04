@@ -2,15 +2,11 @@
 
 /** -
 
-Donations welcome:
-	BTC: 122MeuyZpYz4GSHNrF98e6dnQCXZfHJeGS
-	LTC: LY1L6M6yG26b4sRkLv4BbkmHhPn8GR5fFm
-		~ Thank you!
-
 MIT License (MIT)
 
 Copyright (c) 2013 http://coinwidget.com/ 
 Copyright (c) 2013 http://scotty.cc/
+Copyright (c) 2013 http://b.agilob.net/
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,6 +46,12 @@ THE SOFTWARE.
 					case 'litecoin': 
 						$response = get_litecoin($address);
 						break;
+					case 'dogecoin': 
+						$response = get_dogecoin($address);
+						break;
+                                        case 'noblecoin': 
+						$response = get_noblecoin($address);
+						break;
 				}
 				$responses[$instance] = $response;
 			}
@@ -69,34 +71,47 @@ THE SOFTWARE.
 			return $return;
 		}
 	}
-
-	function get_litecoin($address) {
-		$return = array();
-		$data = get_request('http://explorer.litecoin.net/address/'.$address);
-		if (!empty($data) 
-		  && strstr($data, 'Transactions in: ') 
-		  && strstr($data, 'Received: ')) {
-		  	$return += array(
-				'count' => (int) parse($data,'Transactions in: ','<br />'),
-				'amount' => (float) parse($data,'Received: ','<br />')
-			);
-		  	return $return;
-		}
-	}
-	
 	function get_noblecoin($address) {
 		$return = array();
-		$data = get_request('http://cryptexplorer.com/address/'.$address);
+		$data =  get_request('http://cryptexplorer.com/address/'.$address);
 		if (!empty($data) 
-		  && strstr($data, 'Transactions in: ') 
-		  && strstr($data, 'Received: ')) {
+		  && strstr($data, 'Transactions in</small>') 
+		  && strstr($data, 'Received</small>')) {
 		  	$return += array(
-				'count' => (int) parse($data,'Transactions in: ','<br />'),
-				'amount' => (float) parse($data,'Received: ','<br />')
+				'count' => (int) parse($data,'Transactions in</small>','</div>'),
+				'amount' => (float) parse($data,'Received</small>','</div>')
 			);
 		  	return $return;
 		}
 	}
+	function get_litecoin($address) {
+		$return = array();
+		$data = get_request('http://ltc.block-explorer.com/address/'.$address);
+		if (!empty($data)) {
+		  	$return += array(
+				'count' => (int) parse($data,'Transactions in:</td><td>','</td>'),
+				'amount' => (float) parse($data,'Received:</td><td>','</td>')
+			);
+			return $return;
+		}
+	}
+
+	function get_dogecoin($address) {
+		$return = array();
+		$balance = get_request('http://dogechain.info/chain/Dogecoin/q/addressbalance/'.$address);
+		//$tips = get_request('http://dogechain.info/chain/Dogecoin/q/addresshistory??/'.$address);
+
+		$tips = 1;
+		if($balance == 'ERROR: address invalid') {$balance = 0.0; $tips = 0;}
+
+		$return += array(
+			'count' => (int) $tips,
+			'amount' => floatval($balance)
+		);
+
+		return $return;
+	}
+
 	function get_request($url,$timeout=4) {
 		if (function_exists('curl_version')) {
 			$curl = curl_init();
